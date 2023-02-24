@@ -1,4 +1,5 @@
 name: "morning-insight"
+on: "*"
 description: "𝒢𝑒𝓉'𝓈 𝒶 𝓆𝓊𝑜𝓉𝑒."
 author: pmfs1 # THE ACTION'S AUTHOR, A.K.A. THE REPOSITORY'S OWNER.
 inputs: # THE LIST OF (OPTIONAL) INPUTS:
