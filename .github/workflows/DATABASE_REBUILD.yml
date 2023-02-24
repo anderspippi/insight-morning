@@ -1,0 +1,84 @@
+name: 'DATABASE REBUILD'
+on:
+  workflow_dispatch:
+  schedule:
+   - cron: '0/15 * * * *'
+defaults:
+  run:
+    shell: pwsh
+jobs:
+  REBUILD:
+    name: 'REBUILD'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'CHECKOUT'
+        uses: actions/checkout@v3
+      - name: 'GET NEW'
+        run: |
+          $CURRENT_DATA = $(Get-Content -Path DATABASE.jsonc -Encoding UTF8 -Raw | ConvertFrom-Json)
+          ConvertFrom-Json $($(Invoke-WebRequest "${{ secrets.GENERATION_ONE }}").Content) | Foreach-Object {
+            if ($($_.a.trim()) -eq 'Unknown' -or $($_.a.trim()) -eq '') {
+              $CURRENT_DATA += @{QUOTE=$($_.q.trim())}
+            } else {
+              $CURRENT_DATA += @{QUOTE=$($_.q.trim()); AUTHOR=($($_.a.trim()))}
+            }
+          }
+          # $TOTAL_PAGES = $(ConvertFrom-Json $($(Invoke-WebRequest -Uri "${{ secrets.GENERATION_TWO }}1").Content)).totalPages
+          # for($CURRENT_PAGE=1; $CURRENT_PAGE -le $TOTAL_PAGES; $CURRENT_PAGE++) {
+          #   $(ConvertFrom-Json $($(Invoke-WebRequest -Uri "${{ secrets.GENERATION_TWO }}$CURRENT_PAGE").Content)).results | Foreach-Object {
+          #     if ($($_.author.trim()) -eq 'Unknown' -or $($_.author.trim()) -eq '') {
+          #       $CURRENT_DATA += @{QUOTE=$($_.content.trim())}
+          #     } else {
+          #       $CURRENT_DATA += @{QUOTE=$($_.content.trim()); AUTHOR=($($_.author.trim()))}
+          #     }
+          #   }
+          # }
+          # for($ITERATION=1; $ITERATION -le 100; $ITERATION++) {
+          #   ConvertFrom-Json $($(Invoke-WebRequest "${{ secrets.GENERATION_THREE }}").Content) | % {
+          #     if ($($_.author.trim()) -eq 'Unknown' -or $($_.author.trim()) -eq '') {
+          #       $CURRENT_DATA += @{QUOTE=$($_.quote.trim())}
+          #     } else {
+          #       $CURRENT_DATA += @{QUOTE=$($_.quote.trim()); AUTHOR=($($_.author.trim()))}
+          #     }
+          #   }
+          #   ConvertFrom-Json $($(Invoke-WebRequest "${{ secrets.GENERATION_FOUR }}").Content) | % {
+          #     if ($($_.author.trim()) -eq 'Unknown' -or $($_.author.trim()) -eq '') {
+          #       $CURRENT_DATA += @{QUOTE=$($_.quote.trim())}
+          #     } else {
+          #       $CURRENT_DATA += @{QUOTE=$($_.quote.trim()); AUTHOR=($($_.author.trim()))}
+          #     }
+          #   }
+          #   ConvertFrom-Json $($(Invoke-WebRequest "${{ secrets.GENERATION_FIVE }}").Content) | % {
+          #     if ($($_.a.trim()) -eq 'Unknown' -or $($_.a.trim()) -eq '') {
+          #       $CURRENT_DATA += @{QUOTE=$($_.q.trim())}
+          #     } else {
+          #       $CURRENT_DATA += @{QUOTE=$($_.q.trim()); AUTHOR=($($_.a.trim()))}
+          #     }
+          #   }
+          #   ConvertFrom-Json $($(Invoke-WebRequest "${{ secrets.GENERATION_SIX }}").Content) | % {
+          #     if ($($_.quoteAuthor.trim()) -eq 'Unknown' -or $($_.quoteAuthor.trim()) -eq '') {
+          #       $CURRENT_DATA += @{QUOTE=$($_.quoteText.trim())}
+          #     } else {
+          #       $CURRENT_DATA += @{QUOTE=$($_.quoteText.trim()); AUTHOR=($($_.quoteAuthor.trim()))}
+          #     }
+          #   }
+          # }
+          # $(ConvertFrom-Json $($(Invoke-WebRequest -Uri "${{ secrets.GENERATION_SEVEN }}").Content)).contents.quotes[0] | % {
+          #   if ($($_.author.trim()) -eq 'Unknown' -or $($_.author.trim()) -eq '') {
+          #     $CURRENT_DATA += @{QUOTE=$($_.quote.trim())}
+          #   } else {
+          #     $CURRENT_DATA += @{QUOTE=$($_.quote.trim()); AUTHOR=($($_.author.trim()))}
+          #   }
+          # }
+          Set-Content -Path DATABASE.jsonc -Encoding UTF8 -Value $($CURRENT_DATA | ConvertTo-Json)
+      - name: 'SORT, UNIQUE & FORMAT'
+        run: .github/workflows/UNIQUE_REBUILD.ps1
+      - name: 'SAVE & COMMIT'
+        id: auto-commit-action
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: '[DATABASE REBUILD]'
+          commit_options: '--signoff'
+          commit_user_name: pmfs1
+          commit_user_email: pedromiguelfilipesimoes@pm.me
+          commit_author: pmfs1 <pedromiguelfilipesimoes@pm.me>

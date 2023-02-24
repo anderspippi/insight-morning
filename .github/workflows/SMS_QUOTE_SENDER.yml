@@ -1,0 +1,35 @@
+name: 'SMS QUOTE SENDER'
+on:
+  workflow_dispatch:
+  schedule:
+   - cron: '0 10 * * *'
+jobs:
+  GET:
+    name: 'GET'
+    runs-on: ubuntu-latest
+    outputs:
+      FULL_QUOTE: ${{ steps.GET.outputs.FULL_QUOTE }}
+    steps:
+      - id: 'GET'
+        uses: pmfs1/morning-insight@trunk
+        with:
+          # IF TRUE THE RESULT WILL BE GSM-7 (SMS) COMPATIBLE, MEANING, IT WILL BE LIMITED TO 160 CHARACTERS; OTHERWISE IT WON'T.
+          GSM-7_COMPATIBLE: true
+  SEND:
+    name: 'SEND'
+    runs-on: ubuntu-latest
+    needs: GET
+    steps:
+      - name: 'SEND'
+        shell: pwsh
+        run: |
+          $REQUEST_RESPONSE = $($(Invoke-WebRequest -Uri "${{ secrets.API_URI }}" -Body @{
+            "phone"="${{ secrets.PHONE_NUMBER }}"
+            "message"="${{ needs.GET.outputs.FULL_QUOTE }}"
+            "key"="${{ secrets.API_KEY }}"
+          } -Method Post).content | ConvertFrom-Json)
+          if (-not $REQUEST_RESPONSE.success) {
+            Write-Error "[ERROR] $($REQUEST_RESPONSE.error.ToUpper())"
+          } else {
+            Write-Output "${{ needs.GET.outputs.FULL_QUOTE }}"
+          }

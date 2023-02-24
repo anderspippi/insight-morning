@@ -1,0 +1,24 @@
+name: 'DISCORD QUOTE SENDER'
+on:
+  workflow_dispatch:
+  schedule:
+   - cron: '0 7 * * *'
+jobs:
+  GET:
+    name: 'GET'
+    runs-on: ubuntu-latest
+    outputs:
+      FULL_QUOTE: ${{ steps.GET.outputs.FULL_QUOTE }}
+    steps:
+      - id: 'GET'
+        uses: pmfs1/morning-insight@trunk
+  SEND:
+    name: 'SEND'
+    runs-on: ubuntu-latest
+    needs: GET
+    steps:
+      - name: 'SEND'
+        uses: MineBartekSA/discord-webhook@v2.1
+        with:
+          webhook: ${{ secrets.WEBHOOK_URL }}
+          content: "> *${{ needs.GET.outputs.FULL_QUOTE }}*"
